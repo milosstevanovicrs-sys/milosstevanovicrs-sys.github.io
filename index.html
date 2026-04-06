@@ -1,0 +1,347 @@
+html
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Bezbednost na radu i Zaštita od požara</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .test-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #eee;
+        }
+        .test-header h1 { color: #2c7da0; margin-bottom: 10px; }
+        .question {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            border-left: 4px solid #2c7da0;
+        }
+        .question-text { font-weight: bold; margin-bottom: 12px; color: #333; }
+        .options { padding-left: 20px; }
+        .options label { display: block; margin: 8px 0; cursor: pointer; padding: 5px; }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0 20px 0;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        button {
+            background: #2c7da0;
+            color: white;
+            padding: 14px 35px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+        button:hover { background: #1f5e7a; }
+        .save-btn { background: #28a745; }
+        .save-btn:hover { background: #218838; }
+        .result-box {
+            margin-top: 25px;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .result-pass { background: #d4edda; border: 2px solid #28a745; color: #155724; }
+        .result-fail { background: #f8d7da; border: 2px solid #dc3545; color: #721c24; }
+        .progress { background: #e0e0e0; border-radius: 10px; height: 10px; margin: 20px 0; }
+        .progress-bar { background: #2c7da0; height: 10px; border-radius: 10px; width: 0%; transition: width 0.3s; }
+        .test-title {
+            background: #2c7da0;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .info-note {
+            background: #e7f3ff;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #004085;
+        }
+        .save-message {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 5px;
+            display: none;
+        }
+        .save-success { background: #d4edda; color: #155724; border: 1px solid #28a745; }
+        .save-error { background: #f8d7da; color: #721c24; border: 1px solid #dc3545; }
+        hr { margin: 30px 0; border: none; border-top: 2px dashed #ddd; }
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .test-container { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container" id="app">
+        <div class="test-header">
+            <h1>📋 Provera znanja</h1>
+            <div class="subtitle">Bezbednost i zdravlje na radu + Zaštita od požara</div>
+        </div>
+        <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+        <div id="content"></div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // ==================== BZR TEST PITANJA ====================
+        const bzrQuestions = [
+            { text: "Da li je USTAV Republike Srbije predvideo bezbednost i zdravlje na radu kao pravo zaposlenog čoveka?", options: ["DA", "NE"], correct: "DA" },
+            { text: "Koja lica u preduzeću imaju pravo na bezbedne i zdrave uslove rada:", options: ["a) lica u stalnom radnom odnosu", "b) lica u privremenom radnom odnosu", "c) sva lica koja se po bilo kom osnovu nalaze na radu u preduzeću/ustanovi ili na stručnoj praksi"], correct: "c) sva lica koja se po bilo kom osnovu nalaze na radu u preduzeću/ustanovi ili na stručnoj praksi" },
+            { text: "Kako se u preduzeću/ustanovi uređuje oblast bezbednost i zdravlje na radu?", options: ["a) Statutom", "b) Pravilnikom o bezbednosti i zdravlja na radu", "c) Kolektivnim ugovorom"], correct: "b) Pravilnikom o bezbednosti i zdravlja na radu" },
+            { text: "Radnik se:", options: ["a) mora upoznati sa izvorima opasnosti, uslovima rada, merama zaštite i sigurnim načinom rada", "b) ne mora se upoznati sa izvorima opasnosti i merama bezbednosti i zdravlja na radu"], correct: "a) mora upoznati sa izvorima opasnosti, uslovima rada, merama zaštite i sigurnim načinom rada" },
+            { text: "Da li je prilikom uvoza opreme za rad i lične zaštitne opreme potrebno obezbediti da oni ispunjavaju zahteve važećih srpskih standarda iz oblasti bezbednosti i zdravlja na radu?", options: ["DA", "NE"], correct: "DA" },
+            { text: "Bezbedni uslovi rada ostvaruju se:", options: ["a) tehničkim merama zaštite", "b) osposobljavanjem radnika za siguran rad", "c) preduzimanjem tehničkih, organizacionih, pravnih, obrazovnih i ostalih mera"], correct: "c) preduzimanjem tehničkih, organizacionih, pravnih, obrazovnih i ostalih mera" },
+            { text: "Da li direktor organizacionog dela može dozvoliti upotrebu neispravne opreme za rad, upotrebu neispravnog sredstva i opreme za ličnu zaštitu na radu i da li može dozvoliti zaposlenom da radi, a da ga prethodno nije upoznao sa opasnostima i štetnostima na poslovima koje će obavljati?", options: ["MOŽE", "NE MOŽE"], correct: "NE MOŽE" },
+            { text: "Kada se sprovodi pregled vida za zaposlene koji koriste opremu za rad sa ekranom", options: ["a) Kada se kod zaposlenog pojave problemi sa vidom zbog korišćenja opreme za rad sa ekranom", "b) Pre početka korišćenja opreme za rad sa ekranom, periodično u toku korišćenja oprema za rad sa ekranom u intervalima ne dužim od tri godine i ukoliko se kod zaposlenog pojave problemi sa vidom koji mogu nastati kao posledica korišćenja opreme za rad sa ekranom."], correct: "b) Pre početka korišćenja opreme za rad sa ekranom, periodično u toku korišćenja oprema za rad sa ekranom u intervalima ne dužim od tri godine i ukoliko se kod zaposlenog pojave problemi sa vidom koji mogu nastati kao posledica korišćenja opreme za rad sa ekranom." },
+            { text: "U kom roku je poslodavac dužan da zaposlenog uputi na lekarski pregled na njegov zahtev, ukoliko zaposleni nije raspoređen na radno mesto sa povećanim rizikom?", options: ["a) Najkasnije u roku od tri godine od prethodnog pregleda", "b) Najkasnije u roku od pet godina od prethodnog pregleda", "c) Kada poslodavac smatra da je to potrebno"], correct: "b) Najkasnije u roku od pet godina od prethodnog pregleda" },
+            { text: "Radno mesto sa povećanim rizikom je:", options: ["a) radno mesto gde se obavljaju poslovi na otvorenom prostoru", "b) radno mesto utvrđeno zakonom i Aktom o proceni rizika na kome i pored primenjenih mera postoje okolnosti koje mogu da ugroze bezbednost i zdravlje zaposlenog"], correct: "b) radno mesto utvrđeno zakonom i Aktom o proceni rizika na kome i pored primenjenih mera postoje okolnosti koje mogu da ugroze bezbednost i zdravlje zaposlenog" },
+            { text: "Koje obaveze poslodavac ima u vezi sa pružanjem prve pomoći na radu?", options: ["a) Da obezbedi odgovarajući broj obučenih zaposlenih za pružanje prve pomoći, obezbedi sredstva i opremu za pružanje prve pomoći, uzimajući u obzir procenjene rizike i specifičnosti radnog procesa", "b) Da obezbedi ormarić prve pomoći"], correct: "a) Da obezbedi odgovarajući broj obučenih zaposlenih za pružanje prve pomoći, obezbedi sredstva i opremu za pružanje prve pomoći, uzimajući u obzir procenjene rizike i specifičnosti radnog procesa" },
+            { text: "Ako se zaposleni ne pridržava propisanih mera za bezbedan i zdrav rad:", options: ["a) čini lakšu povredu radnih obaveza", "b) čini težu povredu radnih obaveza", "c) ne čini povredu radnih obaveza"], correct: "b) čini težu povredu radnih obaveza" },
+            { text: "U kom slučaju je zaposleni obavezan da se pridržava propisanih mera za bezbedan i zdrav rad?", options: ["a) uvek", "b) po slobodnoj proceni"], correct: "a) uvek" },
+            { text: "Da li su preduzeća obavezna da vrše ispitivanja radne okoline u prostorijama u kojima se pri procesu rada pojavljuju štetnosti po zdravlje?", options: ["DA", "NE"], correct: "DA" },
+            { text: "Da li zaposleni pod dejstvom alkohola ili narkotika sme da započne rad?", options: ["a) sme, ukoliko sa posebnom pažnjom obavlja svoj posao", "b) ne sme otpočeti rad"], correct: "b) ne sme otpočeti rad" },
+            { text: "Ko je odgovoran za sprovođenje i organizovanje bezbednosti i zdravlja na radu u preduzeću:", options: ["a) direktor, šef, poslovođa", "b) inspekcija rada", "c) stručne ustanove iz oblasti bezbednosti i zdravlja na radu"], correct: "a) direktor, šef, poslovođa" },
+            { text: "Poslodavac je dužan da obezbedi da svi zaposleni budu osposobljeni za bezbedan rad:", options: ["a) samo ako se zaposleni osposobljava za bezbedan rad na poslovima sa povećanim rizikom", "b) kod zasnivanja radnog odnosa, premeštaja na druge poslove, pri uvođenju nove tehnologije ili sredstava za rad i promene procesa rada. Periodične obuke za bezbedan i zdrav rad zaposlenog koji radi na radnom mestu sa povećanim rizikom vrše se najkasnije u roku od jedne godine od dana prethodne obuke, a na ostalim radnim mestima najkasnije u roku od tri godine od dana prethodne obuke."], correct: "b) kod zasnivanja radnog odnosa, premeštaja na druge poslove, pri uvođenju nove tehnologije ili sredstava za rad i promene procesa rada. Periodične obuke za bezbedan i zdrav rad zaposlenog koji radi na radnom mestu sa povećanim rizikom vrše se najkasnije u roku od jedne godine od dana prethodne obuke, a na ostalim radnim mestima najkasnije u roku od tri godine od dana prethodne obuke." },
+            { text: "Ko je dužan da obezbedi osiguranje zaposlenih od povreda na radu i profesionalnih bolesti prema Zakona o bezbednosti i zdravlju na radu?", options: ["a) Poslodavac", "b) Zaposleni", "c) Inspektorat za rad"], correct: "a) Poslodavac" },
+            { text: "Ako zaposleni doživi strujni udar:", options: ["a) hitno isključiti instalaciju, odvojiti povređenog od napona i ukazati mu prvu pomoć", "b) pozvati rukovodioca i čekati hitnu pomoć", "c) pozvati lekara da ukaže prvu pomoć"], correct: "a) hitno isključiti instalaciju, odvojiti povređenog od napona i ukazati mu prvu pomoć" },
+            { text: "Pri radu na računaru veoma je važno:", options: ["a) Pravilno sedeti u ergonomski prilagođenoj stolici, održavati udaljenost od monitora od približno 50–70 cm i obezbediti ravnomerno, difuzno osvetljenje radnog prostora", "b) postaviti zaštitni filter na monitor ekrana zbog visokog nivoa zračenja", "c) ne raditi više od 2 časa dnevno"], correct: "a) Pravilno sedeti u ergonomski prilagođenoj stolici, održavati udaljenost od monitora od približno 50–70 cm i obezbediti ravnomerno, difuzno osvetljenje radnog prostora" },
+            { text: "Šta je najčešći uzrok nastanka povreda na radu:", options: ["a) Mašina, uređaj ili aparat", "b) Zaposleni (ljudski faktor)", "c) Električna energija"], correct: "b) Zaposleni (ljudski faktor)" }
+        ];
+
+        // ==================== PPZ TEST PITANJA ====================
+        const ppzQuestions = [
+            { text: "OBAVEZE PREDUZEĆA/USTANOVE VEZANE ZA ZAŠTITU OD POŽARA REGULISANE SU:", options: ["a) Pravilnikom o bezbednosti i zdravlju na radu", "b) Zakonom o zaštiti od požara"], correct: "b) Zakonom o zaštiti od požara" },
+            { text: "POSEBNE OPASNOSTI PRILIKOM GAŠENJA POŽARA SU:", options: ["a) opasnost od toplote, opekotina, udara električne energije, eksplozije, rušenja delova građevinskih objekata, štetnih produkata sagorevanja itd.", "b) opasnost od opekotina"], correct: "a) opasnost od toplote, opekotina, udara električne energije, eksplozije, rušenja delova građevinskih objekata, štetnih produkata sagorevanja itd." },
+            { text: "ISPRAVNOST INSTALACIJA ZA GAŠENJE ILI DOJAVU POŽARA, UREĐAJA ZA DETEKCIJU ZAPALJIVIH GASOVA KAO I PROTIVPOŽARNIH APARATA I HIDRANATA MORA SE KONTROLISATI, PROVERAVATI:", options: ["a) Dva puta godišnje od strane ovlašćenog pravnog lica", "b) Kontroliše se samo posle upotrebe"], correct: "a) Dva puta godišnje od strane ovlašćenog pravnog lica" },
+            { text: "OBUKA IZ OBLASTI ZAŠTITE OD POŽARA:", options: ["a) Nije obavezna za preduzeća koja nisu požarno ugrožena", "b) Pravno lice je dužno da organizuje obuku zaposlenih iz zaštite od požara, najkasnije u roku od 30 dana od dana stupanja na rad kao i da vrši proveru znanja zaposlenih jedanput u tri godine."], correct: "b) Pravno lice je dužno da organizuje obuku zaposlenih iz zaštite od požara, najkasnije u roku od 30 dana od dana stupanja na rad kao i da vrši proveru znanja zaposlenih jedanput u tri godine." },
+            { text: "NAJČEŠĆI UZROCI NASTANKA POŽARA SU:", options: ["a) Ljudski faktor i neispravna električna instalacija", "b) Građevinske karakteristike", "c) Sirovine", "d) Projektanti", "e) Tehnološki proces"], correct: "a) Ljudski faktor i neispravna električna instalacija" },
+            { text: "KOJI USLOVI MORAJU DA BUDU ISPUNJENI DA BI DOŠLO DO POŽARA?", options: ["a) Goriva materija i izvor paljenja", "b) Goriva materija i kiseonik", "c) Goriva materija, izvor paljenja i kiseonik"], correct: "c) Goriva materija, izvor paljenja i kiseonik" },
+            { text: "PRILIKOM EVAKUACIJE, DA LI JE DOZVOLJENO KORISTITI LIFT:", options: ["a) Nikada ne koristiti lift za evakuaciju", "b) Dozvoljeno je dok se ne isključi struja"], correct: "a) Nikada ne koristiti lift za evakuaciju" },
+            { text: "U POSTUPKU GAŠENJA POŽARA TREBA:", options: ["a) Isključiti električnu instalaciju, ventilaciju i zatvoriti sva vrata i prozore", "b) Ne preduzimati ništa dok je požar u toku"], correct: "a) Isključiti električnu instalaciju, ventilaciju i zatvoriti sva vrata i prozore" },
+            { text: "ZAPALJIVE TEČNOSTI NA RADNOM MESTU MORAJU SE DRŽATI:", options: ["a) U metalnoj zatvorenoj ambalaži, a količine ne smeju biti veće od jednodnevne upotrebe", "b) U metalnim posudama u neograničenim količinama"], correct: "a) U metalnoj zatvorenoj ambalaži, a količine ne smeju biti veće od jednodnevne upotrebe" },
+            { text: "DA LI JE DOZVOLJENO LICNOVANJE OSIGURAČA?", options: ["a) Da", "b) Ne", "c) Ako nema originalnih patrona, a neophodno je nastaviti proizvodnju"], correct: "b) Ne" },
+            { text: "U POGONIMA GDE POSTOJI OPASNOST OD POŽARA - EKSPLOZIJE:", options: ["a) Dozvoljena je upotreba otvorene vatre, alata koji varniči i pušenje", "b) Zabranjena je upotreba otvorene vatre, alata koji varniči i pušenje", "c) Zabranjeno samo pušenje"], correct: "b) Zabranjena je upotreba otvorene vatre, alata koji varniči i pušenje" },
+            { text: "U PROIZVODNIM HALAMA I SKLADIŠTIMA PROTIVPOŽARNI PUTEVI:", options: ["a) Moraju biti obeleženi", "b) Nije propisima regulisano", "c) Ne moraju biti obeleženi"], correct: "a) Moraju biti obeleženi" },
+            { text: "KOJA SU PRIRUČNA SREDSTVA ZA GAŠENJE POŽARA?", options: ["a) Voda", "b) Suvi prah, SO2", "c) Zemlja, pesak, pepeo"], correct: "c) Zemlja, pesak, pepeo" },
+            { text: "VODA KAO SREDSTVO ZA GAŠENJE DELUJE NA PROCES SAGOREVANJA:", options: ["a) Ugušujuće", "b) Izolujuće", "c) Ohlađujuće"], correct: "c) Ohlađujuće" },
+            { text: "VODA SE UPOTREBLJAVA ZA GAŠENJE POŽARA:", options: ["a) Na električnim uređajima", "b) Na čvrstim materijama koje gore žarom", "c) Na lako zapaljivim tečnostima"], correct: "b) Na čvrstim materijama koje gore žarom" },
+            { text: "KAKVI SVE HIDRANTI MOGU BITI:", options: ["a) Zidni - nadzemni", "b) Nisu tipizirani", "c) Zidni, nadzemni i podzemni"], correct: "c) Zidni, nadzemni i podzemni" },
+            { text: "ZIDNI HIDRANT ZA GAŠENJE POŽARA VODOM MORA DA:", options: ["a) Bude obojen plavo, ima mlaznicu i crevo", "b) Bude obojen crveno, ima crevo, mlaznicu i ključ", "c) Bude od drveta, sa crevom unutra"], correct: "b) Bude obojen crveno, ima crevo, mlaznicu i ključ" },
+            { text: "POŽARI NA INSTALACIJAMA POD NAPONOM ELEKTRIČNE STRUJE GASE SE:", options: ["a) Vodom", "b) Hemijskom penom", "c) Ugljen dioksidom, prahom i halonima"], correct: "c) Ugljen dioksidom, prahom i halonima" },
+            { text: "RUČNI VATROGASNI APARAT PUNJEN UGLJEN-DIOKSIDOM (CO2) AKTIVIRA SE TAKO ŠTO SE:", options: ["a) Okrene aparat, promućka i pritisne ručica", "b) Izvuče osigurač, pritisne ručica i mlaznica uperi u pravcu požara"], correct: "b) Izvuče osigurač, pritisne ručica i mlaznica uperi u pravcu požara" },
+            { text: "KAKO PRAVILNO KORISTITI RUČNI VATROGASNI APARAT TIPA S-A U SLUČAJU POŽARA?", options: ["a) Izvučite osigurač, usmerite mlaz prema plamenu, pritisnete ručicu i gasiti kružnim pokretima", "b) Uperiti mlaz direktno u dim, bez povlačenja osigurača"], correct: "a) Izvučite osigurač, usmerite mlaz prema plamenu, pritisnete ručicu i gasiti kružnim pokretima" },
+            { text: "PRILIKOM GAŠENJA MANJIH POŽARA NA OTVORENOM SA PROTIVPOŽARNIM APARATIMA RUKOVAOC VATRI PRILAZI:", options: ["a) Tako da mu vetar duva u leđa", "b) Nije bitno kako će prići", "c) Važno je samo da počne sa gašenjem"], correct: "a) Tako da mu vetar duva u leđa" },
+            { text: "POŽARNO PREVENTIVNE MERE PREDUZIMAJU SE:", options: ["a) Pri projektovanju i izgradnji objekata, mašina, uređaja i instalacija", "b) U toku eksploatacije"], correct: "a) Pri projektovanju i izgradnji objekata, mašina, uređaja i instalacija" }
+        ];
+
+        const PASS_THRESHOLD = 70;
+
+        let currentTest = 'bzr';
+        let bzrAnswers = [];
+        let ppzAnswers = [];
+        let userName = '';
+        let testStarted = false;
+        let calculatedResults = null;
+
+        function render() {
+            const content = document.getElementById('content');
+            const progressBar = document.getElementById('progressBar');
+            
+            if (!testStarted) {
+                content.innerHTML = `
+                    <div class="info-note">
+                        ⚠️ Test se sastoji iz dva dela:<br>
+                        📋 1. Bezbednost i zdravlje na radu (21 pitanje)<br>
+                        🔥 2. Zaštita od požara (22 pitanja)<br>
+                        🎯 Potrebno je preko 70% tačnih odgovora za svaki deo.
+                    </div>
+                    <label><strong>📝 Ime i prezime:</strong></label>
+                    <input type="text" id="userName" placeholder="Unesite vaše ime i prezime">
+                    <button onclick="startTest()">▶️ Započni test</button>
+                `;
+                progressBar.style.width = '0%';
+                return;
+            }
+            
+            const questions = currentTest === 'bzr' ? bzrQuestions : ppzQuestions;
+            const answers = currentTest === 'bzr' ? bzrAnswers : ppzAnswers;
+            const title = currentTest === 'bzr' ? '📋 PRVI DEO: Bezbednost i zdravlje na radu' : '🔥 DRUGI DEO: Zaštita od požara';
+            const questionCount = questions.length;
+            const answeredCount = answers.filter(a => a !== undefined).length;
+            const totalAnswered = (currentTest === 'bzr' ? answeredCount : bzrAnswers.filter(a => a !== undefined).length + answeredCount);
+            const totalQuestions = bzrQuestions.length + ppzQuestions.length;
+            progressBar.style.width = `${(totalAnswered / totalQuestions) * 100}%`;
+            
+            let questionsHtml = `<div class="test-title">${title}</div>`;
+            questionsHtml += `<div class="timer" style="text-align:right; margin-bottom:10px;">📊 Odgovoreno: ${answeredCount}/${questionCount} pitanja</div>`;
+            
+            questions.forEach((q, idx) => {
+                const selected = answers[idx];
+                questionsHtml += `
+                    <div class="question">
+                        <div class="question-text">${idx + 1}. ${q.text}</div>
+                        <div class="options">
+                            ${q.options.map(opt => `
+                                <label>
+                                    <input type="radio" name="q${idx}" value="${opt.replace(/'/g, "\\'")}" ${selected === opt ? 'checked' : ''} onchange="saveAnswer(${idx}, '${opt.replace(/'/g, "\\'")}')">
+                                    ${opt}
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            questionsHtml += `<button onclick="nextTest()">${currentTest === 'bzr' ? '➡️ Dalje na PPZ test' : '✅ Prikaži rezultat'}</button>`;
+            content.innerHTML = questionsHtml;
+        }
+        
+        function saveAnswer(qIndex, value) {
+            if (currentTest === 'bzr') {
+                bzrAnswers[qIndex] = value;
+            } else {
+                ppzAnswers[qIndex] = value;
+            }
+            render();
+        }
+        
+        function startTest() {
+            const nameInput = document.getElementById('userName');
+            if (!nameInput.value.trim()) {
+                alert('Molimo unesite vaše ime i prezime');
+                return;
+            }
+            userName = nameInput.value.trim();
+            testStarted = true;
+            bzrAnswers = new Array(bzrQuestions.length);
+            ppzAnswers = new Array(ppzQuestions.length);
+            render();
+        }
+        
+        function calculateScore(answers, questions) {
+            let score = 0;
+            for (let i = 0; i < questions.length; i++) {
+                if (answers[i] && answers[i] === questions[i].correct) {
+                    score++;
+                }
+            }
+            return score;
+        }
+        
+        async function nextTest() {
+            if (currentTest === 'bzr') {
+                const missing = bzrAnswers.filter(a => a === undefined).length;
+                if (missing > 0) {
+                    alert(`Odgovorite na preostalih ${missing} pitanja pre nego što nastavite.`);
+                    return;
+                }
+                currentTest = 'ppz';
+                render();
+            } else {
+                const missing = ppzAnswers.filter(a => a === undefined).length;
+                if (missing > 0) {
+                    alert(`Odgovorite na preostalih ${missing} pitanja pre nego što završite test.`);
+                    return;
+                }
+                
+                const bzrScore = calculateScore(bzrAnswers, bzrQuestions);
+                const ppzScore = calculateScore(ppzAnswers, ppzQuestions);
+                const bzrPercent = Math.round((bzrScore / bzrQuestions.length) * 100);
+                const ppzPercent = Math.round((ppzScore / ppzQuestions.length) * 100);
+                const bzrPassed = bzrPercent >= PASS_THRESHOLD;
+                const ppzPassed = ppzPercent >= PASS_THRESHOLD;
+                const overallPassed = bzrPassed && ppzPassed;
+                
+                calculatedResults = {
+                    name: userName,
+                    date: new Date().toLocaleString('sr-RS'),
+                    bzr: { score: bzrScore, total: bzrQuestions.length, percent: bzrPercent, passed: bzrPassed },
+                    ppz: { score: ppzScore, total: ppzQuestions.length, percent: ppzPercent, passed: ppzPassed },
+                    overall: overallPassed
+                };
+                
+                const content = document.getElementById('content');
+                const progressBar = document.getElementById('progressBar');
+                progressBar.style.width = '100%';
+                
+                content.innerHTML = `
+                    <div class="result-box ${overallPassed ? 'result-pass' : 'result-fail'}">
+                        <h2>${overallPassed ? '🎉 ČESTITAMO!' : '❌ NISTE POLOŽILI'}</h2>
+                        <p><strong>${userName}</strong></p>
+                        <hr>
+                        <h3>📋 Bezbednost i zdravlje na radu:</h3>
+                        <p>${bzrScore}/${bzrQuestions.length} (${bzrPercent}%) - ${bzrPassed ? '✅ POLOŽENO' : '❌ NIJE POLOŽENO'}</p>
+                        <h3>🔥 Zaštita od požara:</h3>
+                        <p>${ppzScore}/${ppzQuestions.length} (${ppzPercent}%) - ${ppzPassed ? '✅ POLOŽENO' : '❌ NIJE POLOŽENO'}</p>
+                        <hr>
+                        <h3>🎯 Konačan rezultat: ${overallPassed ? 'POLOŽIO' : 'PAO'}</h3>
+                        <div id="saveMessage" class="save-message"></div>
+                        <button class="save-btn" onclick="saveResultToSupabase()">💾 Sačuvaj rezultat</button>
+                    </div>
+                `;
+            }
+        }
+        
+        async function saveResultToSupabase() {
+            if (!calculatedResults) {
+                alert('Nema rezultata za čuvanje.');
+                return;
+            }
+            
+            const msgDiv = document.getElementById('saveMessage');
+            msgDiv.style.display = 'block';
+            msgDiv.innerHTML = '⏳ Čuvanje rezultata...';
+            msgDiv.className = 'save-message';
+            
+            const result = await supabaseClient.saveResult(calculatedResults);
+            
+            if (result.success) {
+                msgDiv.innerHTML = '✅ Rezultat je uspešno sačuvan! Administrator će ga videti.';
+                msgDiv.className = 'save-message save-success';
+                
+                const saveBtn = document.querySelector('.save-btn');
+                if (saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.style.opacity = '0.6';
+                    saveBtn.innerText = '✓ Sačuvano';
+                }
+            } else {
+                msgDiv.innerHTML = '❌ Greška pri čuvanju: ' + result.error + '. Molimo kontaktirajte administratora.';
+                msgDiv.className = 'save-message save-error';
+            }
+        }
+        
+        render();
+    </script>
+</body>
+</html>

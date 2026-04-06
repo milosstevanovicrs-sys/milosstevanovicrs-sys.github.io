@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Rezultati testova BZR i PPZ</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { color: #2c7da0; margin-bottom: 20px; }
+        .stats {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .stat-card {
+            flex: 1;
+            min-width: 150px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-card .number { font-size: 28px; font-weight: bold; color: #2c7da0; }
+        .stat-card .label { color: #666; margin-top: 5px; }
+        button {
+            background: #2c7da0;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #1f5e7a; }
+        .export-btn { background: #28a745; }
+        .export-btn:hover { background: #218838; }
+        .clear-btn { background: #dc3545; }
+        .clear-btn:hover { background: #c82333; }
+        .refresh-btn { background: #17a2b8; }
+        table {
+            width: 100%;
+            background: white;
+            border-radius: 10px;
+            overflow-x: auto;
+            display: block;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #2c7da0; color: white; cursor: pointer; }
+        tr:hover { background: #f5f5f5; }
+        .passed { color: green; font-weight: bold; }
+        .failed { color: red; font-weight: bold; }
+        .search-box { margin: 20px 0; display: flex; gap: 10px; flex-wrap: wrap; }
+        .search-box input, .search-box select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .search-box input { width: 300px; }
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .pagination { margin-top: 20px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+        .pagination button { background: #6c757d; padding: 8px 15px; }
+        .pagination button.active { background: #2c7da0; }
+        .loading { text-align: center; padding: 50px; font-size: 18px; color: #666; }
+        @media (max-width: 800px) {
+            table { font-size: 12px; }
+            th, td { padding: 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Rezultati testova - BZR i PPZ</h1>
+        
+        <div class="stats" id="stats">
+            <div class="loading">Učitavanje statistike...</div>
+        </div>
+        
+        <div>
+            <button class="export-btn" onclick="exportToCSV()">📥 Izvezi u Excel (CSV)</button>
+            <button class="clear-btn" onclick="clearAllResults()">🗑️ Obriši sve rezultate</button>
+            <button class="refresh-btn" onclick="loadResults()">🔄 Osveži</button>
+        </div>
+        
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="🔍 Pretraga po imenu..." onkeyup="filterResults()">
+            <select id="filterStatus" onchange="filterResults()">
+                <option value="all">Svi rezultati</option>
+                <option value="passed">Samo položili</option>
+                <option value="failed">Samo pali</option>
+            </select>
+        </div>
+        
+        <div id="tableContainer">
+            <div class="loading">Učitavanje rezultata...</div>
+        </div>
+        
+        <div class="pagination" id="pagination"></div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        let allResults = [];
+        let filteredResults = [];
+        let currentPage = 1;
+        let rowsPerPage = 20;
+        let currentSort = { column: 'date', direction: 'desc' };
+        
+        async function loadResults() {
+            const container = document.getElementById('tableContainer');
+            container.innerHTML = '<div class="loading">⏳ Učitavanje rezultata...</div>';
+            
+            const result = await supabaseClient.getResults();
+            
+            if (result.success) {
+                allResults = result.data;
+                applyFilterAndSort();
+            } else {
+                container.innerHTML = `<div class="loading" style="color:red;">❌ Greška: ${result.error}</div>`;
+            }
+        }
+        
+        function applyFilterAndSort() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('filterStatus').value;
+            
+            filteredResults = allResults.filter(result => {
+                const matchesSearch = result.name.toLowerCase().includes(searchTerm);
+                const matchesStatus = statusFilter === 'all' || 
+                    (statusFilter === 'passed' && result.overall_passed) ||
+                    (statusFilter === 'failed' && !result.overall_passed);
+                return matchesSearch && matchesStatus;
+            });
+            
+            filteredResults.sort((a, b) => {
+                let valA, valB;
+                switch(currentSort.column) {
+                    case 'name': valA = a.name; valB = b.name; break;
+                    case 'bzrPercent': valA = a.bzr_percent; valB = b.bzr_percent; break;
+                    case 'ppzPercent': valA = a.ppz_percent; valB = b.ppz_percent; break;
+                    case 'status': valA = a.overall_passed ? 1 : 0; valB = b.overall_passed ? 1 : 0; break;
+                    case 'date': valA = new Date(a.date); valB = new Date(b.date); break;
+                    default: valA = a.date; valB = b.date;
+                }
+                if (valA < valB) return currentSort.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return currentSort.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+            
+            currentPage = 1;
+            displayResults();
+            updateStats();
+        }
+        
+        function displayResults() {
+            const container = document.getElementById('tableContainer');
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const pageResults = filteredResults.slice(start, end);
+            
+            if (pageResults.length === 0) {
+                container.innerHTML = '<div class="loading">📭 Nema rezultata</div>';
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+            
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th onclick="sortBy('index')">#</th>
+                            <th onclick="sortBy('name')">Ime i prezime 📝</th>
+                            <th onclick="sortBy('bzrPercent')">BZR</th>
+                            <th onclick="sortBy('bzrPercent')">BZR %</th>
+                            <th onclick="sortBy('ppzPercent')">PPZ</th>
+                            <th onclick="sortBy('ppzPercent')">PPZ %</th>
+                            <th onclick="sortBy('status')">Status 🎯</th>
+                            <th onclick="sortBy('date')">Datum 📅</th>
+                            <th>Akcija</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            pageResults.forEach((result, idx) => {
+                const globalIndex = start + idx + 1;
+                const bzrPassed = result.bzr_percent >= 70;
+                const ppzPassed = result.ppz_percent >= 70;
+                html += `
+                    <tr>
+                        <td>${globalIndex}</td>
+                        <td><strong>${escapeHtml(result.name)}</strong></td>
+                        <td>${result.bzr_score}/${result.bzr_total}</td>
+                        <td style="color: ${bzrPassed ? 'green' : 'red'}">${result.bzr_percent}%</td>
+                        <td>${result.ppz_score}/${result.ppz_total}</td>
+                        <td style="color: ${ppzPassed ? 'green' : 'red'}">${result.ppz_percent}%</td>
+                        <td class="${result.overall_passed ? 'passed' : 'failed'}">${result.overall_passed ? '✅ POLOŽIO' : '❌ PAO'}</td>
+                        <td>${result.date}</td>
+                        <td><button class="delete-btn" onclick="deleteResult('${result.id}')">🗑️ Obriši</button></td>
+                    </tr>
+                `;
+            });
+            
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+            
+            const totalPages = Math.ceil(filteredResults.length / rowsPerPage);
+            let paginationHtml = '';
+            for (let i = 1; i <= totalPages; i++) {
+                paginationHtml += `<button class="${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+            }
+            document.getElementById('pagination').innerHTML = paginationHtml;
+        }
+        
+        function sortBy(column) {
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'desc';
+            }
+            applyFilterAndSort();
+        }
+        
+        function goToPage(page) {
+            currentPage = page;
+            displayResults();
+        }
+        
+        function updateStats() {
+            const statsDiv = document.getElementById('stats');
+            const total = filteredResults.length;
+            const passed = filteredResults.filter(r => r.overall_passed).length;
+            const failed = total - passed;
+            const avgBzr = total > 0 ? Math.round(filteredResults.reduce((sum, r) => sum + r.bzr_percent, 0) / total) : 0;
+            const avgPpz = total > 0 ? Math.round(filteredResults.reduce((sum, r) => sum + r.ppz_percent, 0) / total) : 0;
+            
+            statsDiv.innerHTML = `
+                <div class="stat-card"><div class="number">${total}</div><div class="label">Ukupno radnika</div></div>
+                <div class="stat-card"><div class="number" style="color: green;">${passed}</div><div class="label">Položilo</div></div>
+                <div class="stat-card"><div class="number" style="color: red;">${failed}</div><div class="label">Palo</div></div>
+                <div class="stat-card"><div class="number">${avgBzr}%</div><div class="label">Prosek BZR</div></div>
+                <div class="stat-card"><div class="number">${avgPpz}%</div><div class="label">Prosek PPZ</div></div>
+                <div class="stat-card"><div class="number">${total > 0 ? Math.round((passed/total)*100) : 0}%</div><div class="label">Prolaznost</div></div>
+            `;
+        }
+        
+        async function deleteResult(id) {
+            if (confirm('Da li ste sigurni da želite da obrišete ovaj rezultat?')) {
+                const result = await supabaseClient.deleteResult(id);
+                if (result.success) {
+                    loadResults();
+                } else {
+                    alert('Greška pri brisanju: ' + result.error);
+                }
+            }
+        }
+        
+        async function clearAllResults() {
+            if (confirm('DA LI STE SIGURNI? Ovo će obrisati SVE rezultate testova!')) {
+                const result = await supabaseClient.clearAllResults();
+                if (result.success) {
+                    loadResults();
+                    alert('Svi rezultati su obrisani');
+                } else {
+                    alert('Greška pri brisanju: ' + result.error);
+                }
+            }
+        }
+        
+        function exportToCSV() {
+            if (filteredResults.length === 0) {
+                alert('Nema rezultata za izvoz');
+                return;
+            }
+            
+            let csv = "\"Redni broj\",\"Ime i prezime\",\"BZR poeni\",\"BZR ukupno\",\"BZR %\",\"PPZ poeni\",\"PPZ ukupno\",\"PPZ %\",\"Status\",\"Datum\"\n";
+            filteredResults.forEach((result, index) => {
+                const status = result.overall_passed ? "Položio" : "Pao";
+                csv += `"${index + 1}","${result.name}","${result.bzr_score}","${result.bzr_total}","${result.bzr_percent}%","${result.ppz_score}","${result.ppz_total}","${result.ppz_percent}%","${status}","${result.date}"\n`;
+            });
+            
+            const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `test_rezultati_${new Date().toISOString().slice(0,19)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function filterResults() {
+            applyFilterAndSort();
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        loadResults();
+    </script>
+</body>
+</html>
